@@ -193,6 +193,8 @@ func runServe(args []string) error {
 	dataFlag := fs.String("data", "", "data directory (default ~/LocalChat)")
 	idleFlag := fs.Duration("idle-timeout", 0, "override idle shutdown duration (e.g. 5m, 3s)")
 	noIdleFlag := fs.Bool("no-idle-exit", false, "disable automatic idle shutdown")
+	outboundOnlyFlag := fs.Bool("outbound-only", false, "skip inbound Tailscale listener (sync outbound to configured peers)")
+	autoInitFlag := fs.Bool("auto-init", false, "auto-create default config.json on first run (for mobile wrapper)")
 	if err := fs.Parse(args); err != nil {
 		return err
 	}
@@ -204,10 +206,41 @@ func runServe(args []string) error {
 	cfgPath := filepath.Join(dataDir, "config.json")
 	cfgMgr, err := config.Load(cfgPath)
 	if err != nil {
-		if errors.Is(err, os.ErrNotExist) {
+		if errors.Is(err, os.ErrNotExist) && *autoInitFlag {
+			tok, gerr := config.GenerateToken()
+			if gerr != nil {
+				return gerr
+			}
+			syncAddr := ""
+			if !*outboundOnlyFlag {
+				if ip, derr := config.DetectTailscaleIP(); derr == nil {
+					syncAddr = fmt.Sprintf("%s:%d", ip, config.DefaultSyncPort)
+				}
+			}
+			defName := "Phone"
+			defID := "phone"
+			if runtime.GOOS == "darwin" {
+				defName, defID = "Mac", "mac"
+			}
+			initCfg := config.Config{
+				DeviceID:       defID,
+				DeviceName:     defName,
+				UIAddr:         config.DefaultUIAddr,
+				SyncAddr:       syncAddr,
+				WorkspaceToken: tok,
+				MaxUploadBytes: config.DefaultMaxUploadBytes,
+				IdleTimeoutSec: config.DefaultIdleTimeoutSec,
+				Peers:          []config.Peer{},
+			}
+			if serr := config.Save(cfgPath, initCfg); serr != nil {
+				return serr
+			}
+			cfgMgr = config.NewManager(cfgPath, initCfg)
+		} else if errors.Is(err, os.ErrNotExist) {
 			return fmt.Errorf("missing %s — run 'localchat init' first", cfgPath)
+		} else {
+			return err
 		}
-		return err
 	}
 	cfg := cfgMgr.Snapshot()
 
@@ -244,7 +277,11 @@ func runServe(args []string) error {
 		if syncSrv != nil {
 			return
 		}
-		addr := cfgMgr.Snapshot().SyncAddr
+		addr := strings.TrimSpace(cfgMgr.Snapshot().SyncAddr)
+		if *outboundOnlyFlag || addr == "" {
+			syn.SetListenerStatus(true, "")
+			return
+		}
 		ln, lerr := net.Listen("tcp", addr)
 		if lerr != nil {
 			syn.SetListenerStatus(false, lerr.Error())

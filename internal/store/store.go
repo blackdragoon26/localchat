@@ -160,6 +160,16 @@ func (s *Store) DataDir() string { return s.dataDir }
 // Revision returns the monotonic local mutation counter.
 func (s *Store) Revision() uint64 { return s.rev.Load() }
 
+// SetSelfName updates the display name stamped on newly created local records.
+func (s *Store) SetSelfName(name string) {
+	if strings.TrimSpace(name) == "" {
+		return
+	}
+	s.mu.Lock()
+	s.selfName = strings.TrimSpace(name)
+	s.mu.Unlock()
+}
+
 // StorageStats returns the cached O(1) active chat storage breakdown.
 func (s *Store) StorageStats() StorageStats {
 	s.mu.RLock()

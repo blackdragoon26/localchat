@@ -256,6 +256,16 @@ func TestAddAndRemovePeerTailscaleCIDR(t *testing.T) {
 	if delResp.StatusCode != http.StatusOK {
 		t.Fatalf("expected 200 deleting peer, got %d", delResp.StatusCode)
 	}
+
+	// Update profile name & workspace token via PUT /api/config.
+	newTok, _ := config.GenerateToken()
+	profReq, _ := http.NewRequest(http.MethodPut, ts.URL+"/api/config", strings.NewReader(`{"device_name":"S21FE","workspace_token":"`+newTok+`"}`))
+	profReq.Header.Set("Sec-Fetch-Site", "same-origin")
+	profResp, _ := http.DefaultClient.Do(profReq)
+	profResp.Body.Close()
+	if profResp.StatusCode != http.StatusOK {
+		t.Fatalf("expected 200 on PUT /api/config, got %d", profResp.StatusCode)
+	}
 }
 
 func TestIdleLifecycleAndHeartbeat(t *testing.T) {

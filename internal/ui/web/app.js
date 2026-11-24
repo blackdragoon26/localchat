@@ -48,6 +48,10 @@
     modalToken: document.getElementById("modal-token"),
     revealTokenBtn: document.getElementById("reveal-token-btn"),
     copyTokenBtn: document.getElementById("copy-token-btn"),
+    profileForm: document.getElementById("profile-form"),
+    profileNameInput: document.getElementById("profile-name-input"),
+    profileTokenInput: document.getElementById("profile-token-input"),
+    profileErr: document.getElementById("profile-err"),
     modalPeerList: document.getElementById("modal-peer-list"),
     addPeerForm: document.getElementById("add-peer-form"),
     peerIdInput: document.getElementById("peer-id-input"),
@@ -547,9 +551,12 @@
   }
 
   function renderModal() {
-    el.modalSelfInfo.textContent = `${state.selfName} (${state.selfId}) · ${state.syncAddr}`;
+    el.modalSelfInfo.textContent = state.syncAddr
+      ? `${state.selfName} (${state.selfId}) · ${state.syncAddr}`
+      : `${state.selfName} (${state.selfId}) · outbound sync`;
     el.modalToken.textContent = state.tokenRevealed ? state.workspaceToken : "••••••••••••••••";
     el.revealTokenBtn.textContent = state.tokenRevealed ? "Hide" : "Show";
+    if (!el.profileNameInput.value) el.profileNameInput.value = state.selfName;
 
     el.modalPeerList.textContent = "";
     if (state.peers.length === 0) {
@@ -685,6 +692,28 @@
     }
   });
 
+  el.profileForm.addEventListener("submit", async (ev) => {
+    ev.preventDefault();
+    el.profileErr.classList.add("hidden");
+    const payload = {
+      device_name: el.profileNameInput.value.trim(),
+      workspace_token: el.profileTokenInput.value.trim(),
+    };
+    const resp = await fetch("/api/config", {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+    if (!resp.ok) {
+      el.profileErr.textContent = await resp.text();
+      el.profileErr.classList.remove("hidden");
+      return;
+    }
+    el.profileTokenInput.value = "";
+    await fetchStatus(true);
+    renderModal();
+  });
+
   el.addPeerForm.addEventListener("submit", async (ev) => {
     ev.preventDefault();
     el.addPeerErr.classList.add("hidden");
@@ -724,5 +753,10 @@
   });
   window.addEventListener("focus", () => fetchStatus(false));
 
-  fetchStatus(true);
+  fetchStatus(true).then(() => {
+    if (state.peers.length === 0 && !el.modal.open) {
+      renderModal();
+      el.modal.showModal();
+    }
+  });
 })();

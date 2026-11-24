@@ -106,8 +106,10 @@ func (c *Config) Validate(allowLoopback bool) error {
 	if _, _, err := net.SplitHostPort(c.UIAddr); err != nil {
 		return fmt.Errorf("invalid ui_addr %q: %w", c.UIAddr, err)
 	}
-	if _, _, err := net.SplitHostPort(c.SyncAddr); err != nil {
-		return fmt.Errorf("invalid sync_addr %q: %w", c.SyncAddr, err)
+	if strings.TrimSpace(c.SyncAddr) != "" {
+		if _, _, err := net.SplitHostPort(c.SyncAddr); err != nil {
+			return fmt.Errorf("invalid sync_addr %q: %w", c.SyncAddr, err)
+		}
 	}
 	if len(strings.TrimSpace(c.WorkspaceToken)) < 32 {
 		return errors.New("workspace_token must be at least 32 characters")
@@ -233,6 +235,28 @@ func (m *Manager) RemovePeer(peerID string) (bool, error) {
 	}
 	m.cfg = next
 	return true, nil
+}
+
+// UpdateProfile updates device display name and/or workspace token atomically.
+func (m *Manager) UpdateProfile(deviceName, token string) (Config, error) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	next := m.cfg
+	if name := strings.TrimSpace(deviceName); name != "" {
+		next.DeviceName = name
+	}
+	if tok := strings.TrimSpace(token); tok != "" {
+		if len(tok) < 32 {
+			return Config{}, errors.New("workspace_token must be at least 32 characters")
+		}
+		next.WorkspaceToken = tok
+	}
+	if err := Save(m.path, next); err != nil {
+		return Config{}, err
+	}
+	m.cfg = next
+	return next, nil
 }
 
 // Save writes cfg atomically with mode 0600 inside a 0700 parent directory.

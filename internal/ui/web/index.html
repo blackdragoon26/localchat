@@ -73,6 +73,16 @@
         </div>
       </section>
 
+      <form id="profile-form" class="add-peer-form">
+        <h3>Device Name &amp; Workspace Token</h3>
+        <div class="form-grid">
+          <input id="profile-name-input" type="text" placeholder="Device display name (e.g. Phone)">
+          <input id="profile-token-input" type="text" placeholder="Paste shared workspace token from Mac/Ubuntu">
+        </div>
+        <div id="profile-err" class="form-error hidden"></div>
+        <button class="btn btn-secondary" type="submit">Save Profile &amp; Token</button>
+      </form>
+
       <section>
         <h3>Peers</h3>
         <div id="modal-peer-list" class="modal-peer-list"></div>
@@ -81,9 +91,9 @@
       <form id="add-peer-form" class="add-peer-form">
         <h3>Add Tailscale Device</h3>
         <div class="form-grid">
-          <input id="peer-id-input" type="text" placeholder="Device ID (e.g. mac-air)" required>
+          <input id="peer-id-input" type="text" placeholder="Device ID (e.g. mac)" required>
           <input id="peer-name-input" type="text" placeholder="Display name (e.g. Mac)" required>
-          <input id="peer-addr-input" type="text" placeholder="Tailscale IP:port (e.g. 100.124.162.95:8788)" required>
+          <input id="peer-addr-input" type="text" placeholder="Tailscale IP:port (e.g. 100.x.x.x:8788)" required>
         </div>
         <div id="add-peer-err" class="form-error hidden"></div>
         <button class="btn btn-primary" type="submit">Add Device</button>

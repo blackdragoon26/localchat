@@ -69,7 +69,15 @@ rm -rf /tmp/localchat
 
 Double-click **LocalChat** on your Desktop (or `~/Applications/LocalChat.app`).
 
-### 4. Adding More Devices
+### 4. Android App (`arm64-v8a` APK, No Termux Required)
+
+GitHub Actions (`.github/workflows/android-apk.yml`) automatically builds a standalone **`LocalChat-arm64.apk`** bundling the Go binary inside a minimal Android `WebView` wrapper:
+
+1. Open your repository's **Actions** tab on GitHub → latest **Build Android APK** run → download **`LocalChat-arm64-apk`** and install `LocalChat-arm64.apk` on your Android phone (with Tailscale connected).
+2. On first launch, the **Configured Devices** screen opens automatically—paste your shared **Workspace Token**, set a display name (e.g., `Phone`), and add your Ubuntu/Mac Tailscale `IP:8788` peers.
+3. The phone runs in outbound-only sync mode (pulling & pushing both ways whenever you open the app) and stops cleanly when you close it for zero background battery drain.
+
+### 5. Adding More Devices
 
 1. Install the binary on the new Tailscale device and run `localchat init` with the **same** `--token` and existing `--peer` flags.
 2. On existing devices, click **`+ Add Device`** in the LocalChat webpage and enter the new device's ID, display name, and `<NEW_TAILSCALE_IP>:8788`.

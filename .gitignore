@@ -2,6 +2,12 @@
 /localchat
 /localchat-*
 /dist/
+*.apk
+
+# Android Gradle & packaged Go binary
+android/.gradle/
+android/app/build/
+android/app/src/main/jniLibs/
 
 # Local runtime data & config (never commit user messages, attachments, or shared tokens)
 data/

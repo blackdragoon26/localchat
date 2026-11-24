@@ -86,6 +86,7 @@ func (s *Server) Handler() http.Handler {
 	mux.HandleFunc("GET /api/peers", s.handleGetPeers)
 	mux.HandleFunc("POST /api/peers", s.handleAddPeer)
 	mux.HandleFunc("DELETE /api/peers/{id}", s.handleDeletePeer)
+	mux.HandleFunc("PUT /api/config", s.handleUpdateConfig)
 	mux.HandleFunc("POST /api/sync", s.handleSyncNow)
 
 	return s.securityMiddleware(mux)
@@ -544,6 +545,29 @@ func (s *Server) handleDeletePeer(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, map[string]any{
 		"removed_id": id,
 		"peers":      s.syncer.PeerStatuses(),
+	})
+}
+
+func (s *Server) handleUpdateConfig(w http.ResponseWriter, r *http.Request) {
+	r.Body = http.MaxBytesReader(w, r.Body, 16*1024)
+	var req struct {
+		DeviceName     string `json:"device_name"`
+		WorkspaceToken string `json:"workspace_token"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, "invalid config json", http.StatusBadRequest)
+		return
+	}
+	updated, err := s.cfgMgr.UpdateProfile(req.DeviceName, req.WorkspaceToken)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+	s.store.SetSelfName(updated.DeviceName)
+	s.syncer.SyncAllPeersAsync()
+	writeJSON(w, http.StatusOK, map[string]any{
+		"device_id":   updated.DeviceID,
+		"device_name": updated.DeviceName,
 	})
 }
 
