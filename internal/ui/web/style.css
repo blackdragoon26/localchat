@@ -1,44 +1,65 @@
 :root {
-  --bg: #000000;
-  --panel: #0a0a0a;
-  --panel-alt: #141414;
-  --border: #262626;
-  --border-self: #3d3d3d;
-  --text: #ffffff;
-  --muted: #8a8a8a;
-  --btn-primary-bg: #ffffff;
-  --btn-primary-fg: #000000;
-  --self-bg: #111111;
-  --peer-bg: #050505;
-  --code-bg: #080808;
+  /* Soft neutral charcoal (easy on the eyes, low glare) */
+  --bg: #181818;
+  --panel: #1f1f1f;
+  --panel-alt: #272727;
+  --border: #323232;
+  --border-self: #444444;
+  --text: #dcdcdc;
+  --muted: #939393;
+  --btn-primary-bg: #d4d4d4;
+  --btn-primary-fg: #181818;
+  --self-bg: #242424;
+  --peer-bg: #1c1c1c;
+  --code-bg: #141414;
 
-  /* Color reserved strictly for live device status & sending states */
-  --ok: #22c55e;
-  --sending: #38bdf8;
-  --warn: #f59e0b;
-  --err: #ef4444;
+  /* Soft color reserved strictly for live device status & sending states */
+  --ok: #4ade80;
+  --sending: #60a5fa;
+  --warn: #fbbf24;
+  --err: #f87171;
 }
 
 @media (prefers-color-scheme: light) {
-  :root {
-    --bg: #ffffff;
-    --panel: #ffffff;
-    --panel-alt: #f5f5f5;
-    --border: #e0e0e0;
-    --border-self: #bdbdbd;
-    --text: #000000;
-    --muted: #666666;
-    --btn-primary-bg: #000000;
-    --btn-primary-fg: #ffffff;
-    --self-bg: #f4f4f4;
-    --peer-bg: #ffffff;
-    --code-bg: #f7f7f7;
+  :root:not([data-theme="dark"]) {
+    --bg: #f5f4f0;
+    --panel: #faf9f6;
+    --panel-alt: #eceae4;
+    --border: #dedbd3;
+    --border-self: #ccc8be;
+    --text: #262624;
+    --muted: #6f6e69;
+    --btn-primary-bg: #2c2c2a;
+    --btn-primary-fg: #faf9f6;
+    --self-bg: #eae8e1;
+    --peer-bg: #fcfbf9;
+    --code-bg: #efede8;
 
-    --ok: #16a34a;
-    --sending: #0284c7;
-    --warn: #d97706;
-    --err: #dc2626;
+    --ok: #15803d;
+    --sending: #0369a1;
+    --warn: #b45309;
+    --err: #b91c1c;
   }
+}
+
+:root[data-theme="light"] {
+  --bg: #f5f4f0;
+  --panel: #faf9f6;
+  --panel-alt: #eceae4;
+  --border: #dedbd3;
+  --border-self: #ccc8be;
+  --text: #262624;
+  --muted: #6f6e69;
+  --btn-primary-bg: #2c2c2a;
+  --btn-primary-fg: #faf9f6;
+  --self-bg: #eae8e1;
+  --peer-bg: #fcfbf9;
+  --code-bg: #efede8;
+
+  --ok: #15803d;
+  --sending: #0369a1;
+  --warn: #b45309;
+  --err: #b91c1c;
 }
 
 * { box-sizing: border-box; }
@@ -51,6 +72,7 @@ html, body {
   color: var(--text);
   font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
   font-size: 14px;
+  -webkit-font-smoothing: antialiased;
 }
 
 body {
@@ -91,9 +113,9 @@ body {
 }
 
 .badge-self { color: var(--text); border-color: var(--border); }
-.badge-online { color: var(--ok); border-color: var(--ok); background: rgba(34, 197, 94, 0.08); }
-.badge-offline { color: var(--warn); border-color: var(--warn); background: rgba(245, 158, 11, 0.08); }
-.badge-warn { color: var(--warn); border-color: var(--warn); background: rgba(245, 158, 11, 0.08); }
+.badge-online { color: var(--ok); border-color: var(--ok); background: rgba(74, 222, 128, 0.09); }
+.badge-offline { color: var(--warn); border-color: var(--warn); background: rgba(251, 191, 36, 0.09); }
+.badge-warn { color: var(--warn); border-color: var(--warn); background: rgba(251, 191, 36, 0.09); }
 
 .banner {
   padding: 8px 16px;
@@ -101,8 +123,8 @@ body {
   font-weight: 500;
   border-bottom: 1px solid var(--border);
 }
-.banner-warn { background: rgba(245, 158, 11, 0.12); color: var(--warn); }
-.banner-error { background: rgba(239, 68, 68, 0.12); color: var(--err); }
+.banner-warn { background: rgba(251, 191, 36, 0.11); color: var(--warn); }
+.banner-error { background: rgba(248, 113, 113, 0.12); color: var(--err); }
 
 .btn {
   padding: 6px 12px;
@@ -151,7 +173,7 @@ body {
   z-index: 20;
   border: 2px dashed var(--sending);
   border-radius: 10px;
-  background: rgba(0, 0, 0, 0.85);
+  background: rgba(24, 24, 24, 0.85);
   color: var(--sending);
   display: flex;
   align-items: center;
@@ -225,13 +247,13 @@ body {
   color: var(--muted);
 }
 
-.msg-author { font-weight: 700; color: var(--text); }
+.msg-author { font-weight: 600; color: var(--text); }
 .msg-meta { display: flex; align-items: center; gap: 8px; }
 
 .msg-body {
   white-space: pre-wrap;
   word-break: break-word;
-  line-height: 1.45;
+  line-height: 1.5;
 }
 
 .msg-body a { color: var(--text); text-decoration: underline; text-underline-offset: 2px; }
@@ -261,7 +283,7 @@ body {
   overflow-x: auto;
   font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
   font-size: 12.5px;
-  line-height: 1.4;
+  line-height: 1.45;
 }
 
 .attachment-box {
@@ -283,7 +305,7 @@ body {
   max-width: 100%;
   max-height: 360px;
   border-radius: 6px;
-  background: #000;
+  background: #111;
 }
 
 .attachment-audio { width: 100%; max-width: 420px; }
@@ -300,7 +322,7 @@ body {
   text-decoration: none;
   font-size: 13px;
 }
-.file-card:hover { border-color: var(--text); }
+.file-card:hover { border-color: var(--muted); }
 .file-size { color: var(--muted); font-size: 12px; }
 
 .msg-foot {
@@ -327,7 +349,7 @@ body {
   margin: 0 auto 6px;
   padding: 6px 10px;
   border-radius: 6px;
-  background: rgba(239, 68, 68, 0.14);
+  background: rgba(248, 113, 113, 0.14);
   color: var(--err);
   font-size: 12.5px;
 }
@@ -337,7 +359,7 @@ body {
   margin: 0 auto 6px;
   padding: 5px 10px;
   border-radius: 6px;
-  background: rgba(56, 189, 248, 0.08);
+  background: rgba(96, 165, 250, 0.09);
   border: 1px solid var(--sending);
   color: var(--sending);
   display: flex;
@@ -377,7 +399,7 @@ body {
   font-family: inherit;
   font-size: 14px;
 }
-.composer textarea:focus { outline: 1px solid var(--text); border-color: var(--text); }
+.composer textarea:focus { outline: 1px solid var(--muted); border-color: var(--muted); }
 
 .composer-hint {
   max-width: 860px;
@@ -394,7 +416,7 @@ body {
   width: min(560px, 94vw);
   padding: 0;
 }
-.modal::backdrop { background: rgba(0, 0, 0, 0.7); }
+.modal::backdrop { background: rgba(0, 0, 0, 0.55); }
 .modal-head {
   display: flex;
   align-items: center;
@@ -439,5 +461,5 @@ body {
   background: var(--bg);
   color: var(--text);
 }
-.form-grid input:focus { outline: 1px solid var(--text); border-color: var(--text); }
+.form-grid input:focus { outline: 1px solid var(--muted); border-color: var(--muted); }
 .form-error { color: var(--err); font-size: 12.5px; }

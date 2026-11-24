@@ -18,6 +18,7 @@
     selfBadge: document.getElementById("self-badge"),
     peerBar: document.getElementById("peer-bar"),
     pendingPill: document.getElementById("pending-pill"),
+    themeBtn: document.getElementById("theme-btn"),
     syncBtn: document.getElementById("sync-btn"),
     devicesBtn: document.getElementById("devices-btn"),
     offlineBanner: document.getElementById("offline-banner"),
@@ -55,6 +56,19 @@
 
   const isMac = /Mac|iPhone|iPad/.test(navigator.platform || navigator.userAgent);
   el.shortcutHint.textContent = `${isMac ? "Cmd" : "Ctrl"}+Enter to send · Enter for new line · Paste images or drag-and-drop files`;
+
+  function applyTheme(mode) {
+    document.documentElement.setAttribute("data-theme", mode);
+    el.themeBtn.textContent = mode === "light" ? "Dark" : "Light";
+  }
+  const savedTheme = localStorage.getItem("localchat_theme");
+  const initialTheme = savedTheme || (window.matchMedia("(prefers-color-scheme: light)").matches ? "light" : "dark");
+  applyTheme(initialTheme);
+  el.themeBtn.addEventListener("click", () => {
+    const next = document.documentElement.getAttribute("data-theme") === "light" ? "dark" : "light";
+    localStorage.setItem("localchat_theme", next);
+    applyTheme(next);
+  });
 
   let toastTimer = null;
   function showToast(msg) {
