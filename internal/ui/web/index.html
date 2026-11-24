@@ -2,30 +2,32 @@
 <html lang="en">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <title>LocalChat</title>
   <link rel="stylesheet" href="/style.css">
 </head>
 <body>
   <header class="topbar">
-    <div class="brand">
-      <span class="brand-title">LocalChat</span>
-      <span id="self-badge" class="badge badge-self"></span>
+    <div class="topbar-row">
+      <div class="brand">
+        <span class="brand-title">LocalChat</span>
+        <span id="self-badge" class="badge badge-self hide-mobile"></span>
+        <span id="storage-pill" class="badge badge-storage" title="Active chat storage on this device">0 B</span>
+      </div>
+      <div class="top-actions">
+        <span id="pending-pill" class="badge badge-warn hidden"></span>
+        <button id="sync-btn" class="btn btn-icon-btn" type="button" title="Sync Now">↻<span class="btn-label"> Sync</span></button>
+        <button id="theme-btn" class="btn btn-icon-btn" type="button" title="Toggle light/dark theme">◐</button>
+        <button id="clear-btn" class="btn btn-icon-btn btn-danger" type="button" title="Clear chat on all devices">Clear</button>
+        <button id="devices-btn" class="btn btn-icon-btn" type="button" title="Devices &amp; settings">Devices</button>
+      </div>
     </div>
     <div id="peer-bar" class="peer-bar"></div>
-    <div class="top-actions">
-      <span id="pending-pill" class="badge badge-warn hidden"></span>
-      <span id="storage-pill" class="badge" title="Active chat storage on this device">0 B</span>
-      <button id="theme-btn" class="btn btn-ghost" type="button" title="Toggle light/dark theme">Light</button>
-      <button id="clear-btn" class="btn btn-ghost btn-danger" type="button" title="Clear all messages and attachments on all devices">Clear Chat</button>
-      <button id="sync-btn" class="btn btn-secondary" type="button">Sync Now</button>
-      <button id="devices-btn" class="btn btn-secondary" type="button">+ Add Device</button>
-    </div>
   </header>
 
   <div id="offline-banner" class="banner banner-warn hidden"></div>
   <div id="sleep-banner" class="banner banner-error hidden">
-    LocalChat went to sleep — click the LocalChat desktop icon to reconnect.
+    LocalChat went to sleep — click the LocalChat icon to reconnect.
   </div>
 
   <main class="main">
@@ -50,8 +52,8 @@
     </div>
     <form id="composer" class="composer">
       <input id="file-input" type="file" class="hidden" multiple>
-      <button id="attach-btn" class="btn btn-secondary" type="button" title="Attach file">Attach</button>
-      <textarea id="msg-input" rows="2" placeholder="Paste code (```lang), link, screenshot, or type a message…"></textarea>
+      <button id="attach-btn" class="btn btn-attach" type="button" title="Attach file">+</button>
+      <textarea id="msg-input" rows="1" placeholder="Message…"></textarea>
       <button id="send-btn" class="btn btn-primary" type="submit">Send</button>
     </form>
     <div class="composer-hint" id="shortcut-hint">Ctrl+Enter to send · Enter for new line · Paste images or drag-and-drop files</div>
@@ -59,7 +61,7 @@
 
   <dialog id="devices-modal" class="modal">
     <div class="modal-head">
-      <h2>Configured Devices</h2>
+      <h2>Devices &amp; Setup</h2>
       <button id="close-modal-btn" class="btn-icon" type="button">✕</button>
     </div>
     <div class="modal-body">

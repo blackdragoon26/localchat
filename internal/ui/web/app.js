@@ -62,10 +62,20 @@
 
   const isMac = /Mac|iPhone|iPad/.test(navigator.platform || navigator.userAgent);
   el.shortcutHint.textContent = `${isMac ? "Cmd" : "Ctrl"}+Enter to send · Enter for new line · Paste images or drag-and-drop files`;
+  if (window.innerWidth > 640) {
+    el.msgInput.placeholder = "Paste code (```lang), link, screenshot, or type a message…";
+  }
+
+  function autoResizeComposer() {
+    el.msgInput.style.height = "auto";
+    el.msgInput.style.height = `${Math.min(el.msgInput.scrollHeight, 160)}px`;
+  }
+  el.msgInput.addEventListener("input", autoResizeComposer);
 
   function applyTheme(mode) {
     document.documentElement.setAttribute("data-theme", mode);
-    el.themeBtn.textContent = mode === "light" ? "Dark" : "Light";
+    el.themeBtn.textContent = mode === "light" ? "☾" : "☀";
+    el.themeBtn.title = mode === "light" ? "Switch to dark theme" : "Switch to light theme";
   }
   const savedTheme = localStorage.getItem("localchat_theme");
   const initialTheme = savedTheme || (window.matchMedia("(prefers-color-scheme: light)").matches ? "light" : "dark");
@@ -195,9 +205,9 @@
     for (const p of state.peers) {
       const b = document.createElement("span");
       b.className = `badge ${p.online ? "badge-online" : "badge-offline"}`;
-      b.textContent = p.online ? `● ${p.name} online` : `○ ${p.name} offline`;
+      b.textContent = p.online ? `● ${p.name}` : `○ ${p.name}`;
+      b.title = p.online ? `${p.name} online` : `${p.name} offline${p.last_error ? ` (${p.last_error})` : ""}`;
       if (!p.online) {
-        if (p.last_error) b.title = p.last_error;
         offlinePeers.push(p.name);
       }
       el.peerBar.appendChild(b);
@@ -270,7 +280,8 @@
     const delBtn = document.createElement("button");
     delBtn.className = "btn btn-ghost btn-sm btn-danger";
     delBtn.type = "button";
-    delBtn.textContent = "Delete";
+    delBtn.textContent = "✕";
+    delBtn.title = "Delete message";
     delBtn.addEventListener("click", () => deleteMessage(msg.id));
 
     meta.appendChild(ts);
@@ -507,6 +518,7 @@
     try {
       await sendOneMessage(text, file);
       el.msgInput.value = "";
+      autoResizeComposer();
       setPendingFile(null);
       await fetchStatus(true);
       scrollToBottom();
@@ -664,7 +676,6 @@
 
   el.syncBtn.addEventListener("click", async () => {
     el.syncBtn.disabled = true;
-    el.syncBtn.textContent = "Syncing…";
     try {
       await fetch("/api/sync", { method: "POST" });
       await fetchStatus(true);
@@ -672,7 +683,6 @@
       el.sleepBanner.classList.remove("hidden");
     } finally {
       el.syncBtn.disabled = false;
-      el.syncBtn.textContent = "Sync Now";
     }
   });
 
