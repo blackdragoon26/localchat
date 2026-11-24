@@ -1,0 +1,13 @@
+# Compiled binaries
+/localchat
+/localchat-*
+/dist/
+
+# Local runtime data & config (never commit user messages, attachments, or shared tokens)
+data/
+config.json
+*.log
+
+# OS files
+.DS_Store
+Thumbs.db

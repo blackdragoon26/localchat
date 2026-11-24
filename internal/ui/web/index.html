@@ -1,0 +1,93 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>LocalChat</title>
+  <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">
+      <span class="brand-title">LocalChat</span>
+      <span id="self-badge" class="badge badge-self"></span>
+    </div>
+    <div id="peer-bar" class="peer-bar"></div>
+    <div class="top-actions">
+      <span id="pending-pill" class="badge badge-warn hidden"></span>
+      <button id="sync-btn" class="btn btn-secondary" type="button">Sync Now</button>
+      <button id="devices-btn" class="btn btn-secondary" type="button">+ Add Device</button>
+    </div>
+  </header>
+
+  <div id="offline-banner" class="banner banner-warn hidden"></div>
+  <div id="sleep-banner" class="banner banner-error hidden">
+    LocalChat went to sleep — click the LocalChat desktop icon to reconnect.
+  </div>
+
+  <main class="main">
+    <div id="drop-overlay" class="drop-overlay hidden">Drop files to send</div>
+    <button id="new-above-pill" class="new-above hidden" type="button">New messages synced above ↑</button>
+    <div class="feed-wrap" id="feed-wrap">
+      <div class="load-more-row">
+        <button id="load-more-btn" class="btn btn-ghost hidden" type="button">Load older</button>
+      </div>
+      <div id="feed" class="feed"></div>
+    </div>
+  </main>
+
+  <footer class="composer-wrap">
+    <div id="toast" class="toast hidden"></div>
+    <div id="pending-file-bar" class="pending-file hidden">
+      <span id="pending-file-name"></span>
+      <button id="clear-file-btn" class="btn-icon" type="button" title="Remove file">✕</button>
+    </div>
+    <div id="upload-progress-wrap" class="progress-wrap hidden">
+      <div id="upload-progress-bar" class="progress-bar"></div>
+    </div>
+    <form id="composer" class="composer">
+      <input id="file-input" type="file" class="hidden" multiple>
+      <button id="attach-btn" class="btn btn-secondary" type="button" title="Attach file">Attach</button>
+      <textarea id="msg-input" rows="2" placeholder="Paste code (```lang), link, screenshot, or type a message…"></textarea>
+      <button id="send-btn" class="btn btn-primary" type="submit">Send</button>
+    </form>
+    <div class="composer-hint" id="shortcut-hint">Ctrl+Enter to send · Enter for new line · Paste images or drag-and-drop files</div>
+  </footer>
+
+  <dialog id="devices-modal" class="modal">
+    <div class="modal-head">
+      <h2>Configured Devices</h2>
+      <button id="close-modal-btn" class="btn-icon" type="button">✕</button>
+    </div>
+    <div class="modal-body">
+      <section class="info-box">
+        <div><strong>This device:</strong> <span id="modal-self-info"></span></div>
+        <div class="token-row">
+          <strong>Workspace token:</strong>
+          <code id="modal-token" class="token-mask">••••••••••••••••</code>
+          <button id="reveal-token-btn" class="btn btn-ghost btn-sm" type="button">Show</button>
+          <button id="copy-token-btn" class="btn btn-ghost btn-sm" type="button">Copy</button>
+        </div>
+      </section>
+
+      <section>
+        <h3>Peers</h3>
+        <div id="modal-peer-list" class="modal-peer-list"></div>
+      </section>
+
+      <form id="add-peer-form" class="add-peer-form">
+        <h3>Add Tailscale Device</h3>
+        <div class="form-grid">
+          <input id="peer-id-input" type="text" placeholder="Device ID (e.g. mac-air)" required>
+          <input id="peer-name-input" type="text" placeholder="Display name (e.g. Mac)" required>
+          <input id="peer-addr-input" type="text" placeholder="Tailscale IP:port (e.g. 100.124.162.95:8788)" required>
+        </div>
+        <div id="add-peer-err" class="form-error hidden"></div>
+        <button class="btn btn-primary" type="submit">Add Device</button>
+      </form>
+    </div>
+  </dialog>
+
+  <script src="/app.js"></script>
+</body>
+</html>
