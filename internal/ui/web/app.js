@@ -570,17 +570,21 @@
       const row = document.createElement("div");
       row.className = "modal-peer-item";
       const info = document.createElement("div");
-      info.textContent = `${peer.name} (${peer.id}) — ${peer.addr}`;
-      const rm = document.createElement("button");
-      rm.className = "btn btn-ghost btn-sm btn-danger";
-      rm.type = "button";
-      rm.textContent = "Remove";
-      rm.addEventListener("click", async () => {
-        const resp = await fetch(`/api/peers/${encodeURIComponent(peer.id)}`, { method: "DELETE" });
-        if (resp.ok) await fetchStatus(true);
-      });
+      info.textContent = peer.inbound_only
+        ? `${peer.name} (${peer.id}) — connected (mobile/outbound)`
+        : `${peer.name} (${peer.id}) — ${peer.addr}`;
       row.appendChild(info);
-      row.appendChild(rm);
+      if (!peer.inbound_only) {
+        const rm = document.createElement("button");
+        rm.className = "btn btn-ghost btn-sm btn-danger";
+        rm.type = "button";
+        rm.textContent = "Remove";
+        rm.addEventListener("click", async () => {
+          const resp = await fetch(`/api/peers/${encodeURIComponent(peer.id)}`, { method: "DELETE" });
+          if (resp.ok) await fetchStatus(true);
+        });
+        row.appendChild(rm);
+      }
       el.modalPeerList.appendChild(row);
     }
   }

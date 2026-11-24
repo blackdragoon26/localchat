@@ -40,10 +40,17 @@ type PeerStatus struct {
 	Name         string `json:"name"`
 	Addr         string `json:"addr"`
 	Online       bool   `json:"online"`
+	InboundOnly  bool   `json:"inbound_only,omitempty"`
 	LastSeenMs   int64  `json:"last_seen_ms"`
 	LastSyncMs   int64  `json:"last_sync_ms"`
 	LastError    string `json:"last_error,omitempty"`
 	PendingCount int    `json:"pending_count"`
+}
+
+type inboundPeer struct {
+	ID         string
+	Name       string
+	LastSeenMs int64
 }
 
 type peerState struct {
@@ -67,6 +74,7 @@ type Syncer struct {
 
 	mu         sync.RWMutex
 	peers      map[string]*peerState
+	inbound    map[string]inboundPeer
 	sending    map[string]int // recordID -> active outbound push count
 	syncOnline bool
 	syncError  string
@@ -94,6 +102,7 @@ func New(cfgMgr *config.Manager, st *store.Store, tracker *lifecycle.Tracker) *S
 		},
 		blobSem: make(chan struct{}, maxConcurrentBlobs),
 		peers:   make(map[string]*peerState),
+		inbound: make(map[string]inboundPeer),
 		sending: make(map[string]int),
 	}
 }
@@ -163,11 +172,32 @@ func (s *Syncer) ResetBackoff() {
 	}
 }
 
-// PeerStatuses returns a snapshot of all configured peers and their live state.
+func (s *Syncer) recordInboundSeen(id, name string) {
+	id = strings.TrimSpace(id)
+	name = strings.TrimSpace(name)
+	if !config.ValidateID(id) || id == s.cfgMgr.Snapshot().DeviceID {
+		return
+	}
+	if name == "" {
+		name = id
+	}
+	s.mu.Lock()
+	s.inbound[id] = inboundPeer{
+		ID:         id,
+		Name:       name,
+		LastSeenMs: time.Now().UnixMilli(),
+	}
+	s.mu.Unlock()
+}
+
+// PeerStatuses returns a snapshot of all configured peers plus recently active
+// inbound-only devices (such as the Android app).
 func (s *Syncer) PeerStatuses() []PeerStatus {
 	peers := s.cfgMgr.Peers()
-	out := make([]PeerStatus, 0, len(peers))
+	configured := make(map[string]struct{}, len(peers))
+	out := make([]PeerStatus, 0, len(peers)+2)
 	for _, p := range peers {
+		configured[p.ID] = struct{}{}
 		ps := s.getPeerState(p.ID)
 		ps.mu.Lock()
 		st := PeerStatus{
@@ -183,6 +213,27 @@ func (s *Syncer) PeerStatuses() []PeerStatus {
 		st.PendingCount = s.countPendingForPeer(p)
 		out = append(out, st)
 	}
+
+	// Include recently active inbound-only devices (seen within last 45s) as online.
+	cutoff := time.Now().Add(-45 * time.Second).UnixMilli()
+	s.mu.RLock()
+	for id, ip := range s.inbound {
+		if _, exists := configured[id]; exists {
+			continue
+		}
+		if ip.LastSeenMs >= cutoff {
+			out = append(out, PeerStatus{
+				ID:          ip.ID,
+				Name:        ip.Name,
+				Addr:        "outbound-only",
+				Online:      true,
+				InboundOnly: true,
+				LastSeenMs:  ip.LastSeenMs,
+				LastSyncMs:  ip.LastSeenMs,
+			})
+		}
+	}
+	s.mu.RUnlock()
 	return out
 }
 
@@ -215,6 +266,9 @@ func (s *Syncer) authMiddleware(next http.Handler) http.Handler {
 		if subtle.ConstantTimeCompare([]byte(got), []byte(token)) != 1 {
 			http.Error(w, "unauthorized", http.StatusUnauthorized)
 			return
+		}
+		if devID := r.Header.Get("X-LocalChat-Device-ID"); devID != "" {
+			s.recordInboundSeen(devID, r.Header.Get("X-LocalChat-Device-Name"))
 		}
 		next.ServeHTTP(w, r)
 	})
@@ -332,6 +386,7 @@ func (s *Syncer) handlePush(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "invalid record json", http.StatusBadRequest)
 		return
 	}
+	s.recordInboundSeen(rec.DeviceID, rec.DeviceName)
 	_, err := s.store.IngestRemoteRecord(rec)
 	if err != nil {
 		switch {
@@ -577,6 +632,13 @@ func (s *Syncer) recordPeerFailureLocked(ps *peerState, err error) {
 	ps.nextRetryAt = time.Now().Add(delay)
 }
 
+func (s *Syncer) setOutboundAuthHeaders(req *http.Request) {
+	cfg := s.cfgMgr.Snapshot()
+	req.Header.Set("Authorization", "Bearer "+cfg.WorkspaceToken)
+	req.Header.Set("X-LocalChat-Device-ID", cfg.DeviceID)
+	req.Header.Set("X-LocalChat-Device-Name", cfg.DeviceName)
+}
+
 func (s *Syncer) pushRecordLocked(ctx context.Context, p config.Peer, rec store.Record) error {
 	if rec.Kind == store.KindMessage && rec.Attachment != nil {
 		if err := s.pushAttachment(ctx, p, *rec.Attachment); err != nil {
@@ -595,7 +657,7 @@ func (s *Syncer) pushRecordLocked(ctx context.Context, p config.Peer, rec store.
 	if err != nil {
 		return err
 	}
-	req.Header.Set("Authorization", "Bearer "+s.cfgMgr.Snapshot().WorkspaceToken)
+	s.setOutboundAuthHeaders(req)
 	req.Header.Set("Content-Type", "application/json")
 
 	resp, err := s.client.Do(req)
@@ -693,7 +755,7 @@ func (s *Syncer) fetchManifest(ctx context.Context, p config.Peer, etag string) 
 	if err != nil {
 		return store.Manifest{}, false, err
 	}
-	req.Header.Set("Authorization", "Bearer "+s.cfgMgr.Snapshot().WorkspaceToken)
+	s.setOutboundAuthHeaders(req)
 	if etag != "" {
 		req.Header.Set("If-None-Match", etag)
 	}

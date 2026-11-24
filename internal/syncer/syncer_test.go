@@ -159,6 +159,17 @@ func TestLivePushOfflineCatchupTombstoneAndThirdPeer(t *testing.T) {
 		t.Fatalf("expected 3rd peer to record tombstone for deleted secret")
 	}
 
+	// Verify Ubuntu automatically surfaces outbound-only 3rd peer ("desktop") as online via inbound sync presence.
+	foundDesktop := false
+	for _, ps := range ubuntu.syncer.PeerStatuses() {
+		if ps.ID == "desktop" && ps.Online && ps.InboundOnly {
+			foundDesktop = true
+		}
+	}
+	if !foundDesktop {
+		t.Fatalf("expected outbound-only peer 'desktop' to appear online in Ubuntu PeerStatuses(), got %+v", ubuntu.syncer.PeerStatuses())
+	}
+
 	// 5. Verify both synced devices report identical non-zero StorageStats before ClearAll.
 	ubStats := ubuntu.store.StorageStats()
 	macStats := mac.store.StorageStats()
