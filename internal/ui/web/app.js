@@ -18,6 +18,7 @@
     selfBadge: document.getElementById("self-badge"),
     peerBar: document.getElementById("peer-bar"),
     pendingPill: document.getElementById("pending-pill"),
+    storagePill: document.getElementById("storage-pill"),
     themeBtn: document.getElementById("theme-btn"),
     clearBtn: document.getElementById("clear-btn"),
     syncBtn: document.getElementById("sync-btn"),
@@ -80,9 +81,11 @@
   }
 
   function formatBytes(n) {
+    if (!n || n <= 0) return "0 B";
     if (n < 1024) return `${n} B`;
     if (n < 1024 * 1024) return `${(n / 1024).toFixed(1)} KB`;
-    return `${(n / (1024 * 1024)).toFixed(1)} MB`;
+    if (n < 1024 * 1024 * 1024) return `${(n / (1024 * 1024)).toFixed(1)} MB`;
+    return `${(n / (1024 * 1024 * 1024)).toFixed(2)} GB`;
   }
 
   function formatTime(ms) {
@@ -202,6 +205,13 @@
     } else {
       el.pendingPill.classList.add("hidden");
     }
+
+    const st = data.storage || { total_bytes: 0, message_count: 0, attachment_count: 0 };
+    const totalLabel = formatBytes(st.total_bytes);
+    el.storagePill.textContent = totalLabel;
+    el.storagePill.title = st.total_bytes > 0
+      ? `Chat storage: ${totalLabel} (${st.message_count} messages, ${st.attachment_count} files — mirrored on synced devices)`
+      : "Chat storage: 0 B (empty)";
 
     const warnings = [];
     if (!data.sync_online) {

@@ -200,6 +200,7 @@ func (s *Server) handleStatus(w http.ResponseWriter, _ *http.Request) {
 		"sync_online":      syncOnline,
 		"sync_error":       syncErr,
 		"pending_count":    s.store.PendingCount(cfg.Peers),
+		"storage":          s.store.StorageStats(),
 		"peers":            peers,
 	})
 }

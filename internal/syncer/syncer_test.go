@@ -159,7 +159,14 @@ func TestLivePushOfflineCatchupTombstoneAndThirdPeer(t *testing.T) {
 		t.Fatalf("expected 3rd peer to record tombstone for deleted secret")
 	}
 
-	// 5. ClearAll on Mac propagates tombstones and deletes attachments on Ubuntu too.
+	// 5. Verify both synced devices report identical non-zero StorageStats before ClearAll.
+	ubStats := ubuntu.store.StorageStats()
+	macStats := mac.store.StorageStats()
+	if ubStats != macStats || ubStats.TotalBytes == 0 || ubStats.AttachmentBytes != int64(len(blob)) {
+		t.Fatalf("expected identical non-zero StorageStats on Ubuntu (%+v) and Mac (%+v)", ubStats, macStats)
+	}
+
+	// 6. ClearAll on Mac propagates tombstones, deletes attachments, and resets StorageStats to 0 on both.
 	tombs, err := mac.store.ClearAll()
 	if err != nil || len(tombs) != 1 {
 		t.Fatalf("mac ClearAll: len=%d err=%v", len(tombs), err)
@@ -171,6 +178,12 @@ func TestLivePushOfflineCatchupTombstoneAndThirdPeer(t *testing.T) {
 	}
 	if _, _, err := ubuntu.store.ResolveAttachment(att.ID); err == nil {
 		t.Fatalf("expected attachment blob removed on Ubuntu after Mac ClearAll sync")
+	}
+	if got := ubuntu.store.StorageStats(); got.TotalBytes != 0 {
+		t.Fatalf("expected 0 TotalBytes on Ubuntu after ClearAll sync, got %+v", got)
+	}
+	if got := mac.store.StorageStats(); got.TotalBytes != 0 {
+		t.Fatalf("expected 0 TotalBytes on Mac after ClearAll, got %+v", got)
 	}
 }
 

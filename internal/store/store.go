@@ -84,6 +84,17 @@ type DeliveryStatus struct {
 	PendingPeers []string `json:"pending_peers"`
 }
 
+// StorageStats summarizes the active chat storage footprint (live messages + attachments).
+// Values are computed deterministically from live records so synced peers report identical sizes
+// and drop to 0 bytes when the chat is cleared.
+type StorageStats struct {
+	TotalBytes      int64 `json:"total_bytes"`
+	MessageBytes    int64 `json:"message_bytes"`
+	AttachmentBytes int64 `json:"attachment_bytes"`
+	MessageCount    int   `json:"message_count"`
+	AttachmentCount int   `json:"attachment_count"`
+}
+
 // Store manages local NDJSON logs, attachment blobs, and the delivery ledger.
 type Store struct {
 	dataDir  string
@@ -98,6 +109,7 @@ type Store struct {
 	orderedIDs  []string                  // live message IDs sorted by (created_at_ms, id)
 	acked       map[string][]string       // record ID -> sorted peer IDs
 	manifestTag string
+	stats       StorageStats
 
 	rev atomic.Uint64
 }
@@ -147,6 +159,13 @@ func (s *Store) DataDir() string { return s.dataDir }
 
 // Revision returns the monotonic local mutation counter.
 func (s *Store) Revision() uint64 { return s.rev.Load() }
+
+// StorageStats returns the cached O(1) active chat storage breakdown.
+func (s *Store) StorageStats() StorageStats {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	return s.stats
+}
 
 func (s *Store) bumpRevisionLocked() {
 	s.rebuildOrderAndETagLocked()
@@ -302,6 +321,21 @@ func (s *Store) rebuildOrderAndETagLocked() {
 		return a.ID < b.ID
 	})
 	s.orderedIDs = ids
+
+	var stats StorageStats
+	stats.MessageCount = len(s.messages)
+	for _, id := range ids {
+		rec := s.messages[id]
+		if raw, err := json.Marshal(rec); err == nil {
+			stats.MessageBytes += int64(len(raw)) + 1 // +1 for NDJSON newline
+		}
+		if rec.Attachment != nil {
+			stats.AttachmentCount++
+			stats.AttachmentBytes += rec.Attachment.SizeBytes
+		}
+	}
+	stats.TotalBytes = stats.MessageBytes + stats.AttachmentBytes
+	s.stats = stats
 
 	// Build deterministic manifest digest.
 	recIDs := make([]string, 0, len(s.messages)+len(s.tombstones))

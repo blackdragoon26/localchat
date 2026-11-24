@@ -210,9 +210,17 @@ func TestClearAllScrubsMessagesAndDeletesBlobs(t *testing.T) {
 		t.Fatalf("create 2: %v", err)
 	}
 
+	before := st.StorageStats()
+	if before.MessageCount != 2 || before.AttachmentCount != 1 || before.AttachmentBytes != int64(len("heavy video bytes")) || before.TotalBytes <= before.AttachmentBytes {
+		t.Fatalf("unexpected StorageStats before ClearAll: %+v", before)
+	}
+
 	tombs, err := st.ClearAll()
 	if err != nil || len(tombs) != 2 {
 		t.Fatalf("ClearAll: tombs=%d err=%v", len(tombs), err)
+	}
+	if after := st.StorageStats(); after.TotalBytes != 0 || after.MessageCount != 0 || after.AttachmentCount != 0 {
+		t.Fatalf("expected 0 StorageStats after ClearAll, got %+v", after)
 	}
 	if _, err := os.Stat(attPath); !errors.Is(err, os.ErrNotExist) {
 		t.Fatalf("expected blob removed after ClearAll, stat err=%v", err)

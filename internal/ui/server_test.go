@@ -125,6 +125,20 @@ func TestRootExactMatchHostAndCSRFFailClosed(t *testing.T) {
 	if clearResp.StatusCode != http.StatusOK {
 		t.Fatalf("expected 200 for same-origin DELETE /api/messages, got %d", clearResp.StatusCode)
 	}
+
+	// /api/status reports 0 storage bytes after Clear Chat.
+	stResp, err := http.Get(ts.URL + "/api/status")
+	if err != nil {
+		t.Fatalf("GET /api/status: %v", err)
+	}
+	var stBody struct {
+		Storage store.StorageStats `json:"storage"`
+	}
+	_ = json.NewDecoder(stResp.Body).Decode(&stBody)
+	stResp.Body.Close()
+	if stBody.Storage.TotalBytes != 0 || stBody.Storage.MessageCount != 0 {
+		t.Fatalf("expected 0 storage bytes after clear, got %+v", stBody.Storage)
+	}
 }
 
 func TestAttachmentSecurityMIMECapAndRange(t *testing.T) {
