@@ -364,6 +364,19 @@ func (s *Syncer) PushRecordAsync(rec store.Record) {
 	}()
 }
 
+// SyncAllPeersAsync triggers a forced catch-up sync across all peers asynchronously
+// (used after bulk operations like ClearAll to propagate tombstones promptly).
+func (s *Syncer) SyncAllPeersAsync() {
+	s.ResetBackoff()
+	s.wg.Add(1)
+	s.tracker.BeginTransfer()
+	go func() {
+		defer s.wg.Done()
+		defer s.tracker.EndTransfer()
+		s.SyncAllPeers(context.Background(), true)
+	}()
+}
+
 // PushRecordToAll concurrently pushes a single record (and its attachment if any)
 // to every configured peer.
 func (s *Syncer) PushRecordToAll(ctx context.Context, rec store.Record) {

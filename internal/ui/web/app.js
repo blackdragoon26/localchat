@@ -19,6 +19,7 @@
     peerBar: document.getElementById("peer-bar"),
     pendingPill: document.getElementById("pending-pill"),
     themeBtn: document.getElementById("theme-btn"),
+    clearBtn: document.getElementById("clear-btn"),
     syncBtn: document.getElementById("sync-btn"),
     devicesBtn: document.getElementById("devices-btn"),
     offlineBanner: document.getElementById("offline-banner"),
@@ -619,6 +620,25 @@
   });
   el.feedWrap.addEventListener("scroll", () => {
     if (el.feedWrap.scrollTop < 40) el.newAbovePill.classList.add("hidden");
+  });
+
+  el.clearBtn.addEventListener("click", async () => {
+    if (state.messages.length === 0) return;
+    if (!confirm("Clear all messages and delete all attachments on this device and synced peers?")) return;
+    el.clearBtn.disabled = true;
+    try {
+      const resp = await fetch("/api/messages", { method: "DELETE" });
+      if (!resp.ok) {
+        showToast("Clear chat failed");
+        return;
+      }
+      state.loadedCount = 50;
+      await fetchStatus(true);
+    } catch {
+      el.sleepBanner.classList.remove("hidden");
+    } finally {
+      el.clearBtn.disabled = false;
+    }
   });
 
   el.syncBtn.addEventListener("click", async () => {

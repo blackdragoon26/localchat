@@ -80,6 +80,7 @@ func (s *Server) Handler() http.Handler {
 	mux.HandleFunc("GET /api/status", s.handleStatus)
 	mux.HandleFunc("GET /api/messages", s.handleListMessages)
 	mux.HandleFunc("POST /api/messages", s.handleCreateMessage)
+	mux.HandleFunc("DELETE /api/messages", s.handleClearMessages)
 	mux.HandleFunc("DELETE /api/messages/{id}", s.handleDeleteMessage)
 	mux.HandleFunc("GET /api/attachments/{id}", s.handleGetAttachment)
 	mux.HandleFunc("GET /api/peers", s.handleGetPeers)
@@ -373,6 +374,22 @@ func (s *Server) handleCreateMessage(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusCreated, map[string]any{
 		"message": s.annotateMessage(rec, s.cfgMgr.Peers()),
 		"rev":     s.store.Revision(),
+	})
+}
+
+func (s *Server) handleClearMessages(w http.ResponseWriter, _ *http.Request) {
+	tombs, err := s.store.ClearAll()
+	if err != nil {
+		slog.Error("clear chat failed", "err", err)
+		http.Error(w, "failed to clear chat", http.StatusInternalServerError)
+		return
+	}
+	if len(tombs) > 0 {
+		s.syncer.SyncAllPeersAsync()
+	}
+	writeJSON(w, http.StatusOK, map[string]any{
+		"cleared_count": len(tombs),
+		"rev":           s.store.Revision(),
 	})
 }
 

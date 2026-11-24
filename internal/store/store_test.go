@@ -187,3 +187,43 @@ func TestAckedPersistenceAndPagination(t *testing.T) {
 		t.Fatalf("unexpected page2: len=%d hasMore=%v", len(page2), hasMore2)
 	}
 }
+
+func TestClearAllScrubsMessagesAndDeletesBlobs(t *testing.T) {
+	dir := t.TempDir()
+	st, err := Open(dir, "ubuntu", "Ubuntu")
+	if err != nil {
+		t.Fatalf("Open: %v", err)
+	}
+
+	att, err := st.SaveUploadedAttachment(bytes.NewReader([]byte("heavy video bytes")), "clip.mp4", 1024)
+	if err != nil {
+		t.Fatalf("SaveUploadedAttachment: %v", err)
+	}
+	if _, err := st.CreateLocalMessage("first secret message", att); err != nil {
+		t.Fatalf("create 1: %v", err)
+	}
+	attPath, _, err := st.ResolveAttachment(att.ID)
+	if err != nil {
+		t.Fatalf("ResolveAttachment before clear: %v", err)
+	}
+	if _, err := st.CreateLocalMessage("second secret message", nil); err != nil {
+		t.Fatalf("create 2: %v", err)
+	}
+
+	tombs, err := st.ClearAll()
+	if err != nil || len(tombs) != 2 {
+		t.Fatalf("ClearAll: tombs=%d err=%v", len(tombs), err)
+	}
+	if _, err := os.Stat(attPath); !errors.Is(err, os.ErrNotExist) {
+		t.Fatalf("expected blob removed after ClearAll, stat err=%v", err)
+	}
+
+	st2, err := Open(dir, "ubuntu", "Ubuntu")
+	if err != nil {
+		t.Fatalf("reopen: %v", err)
+	}
+	msgs, _, _ := st2.ListMessages(50, "")
+	if len(msgs) != 0 {
+		t.Fatalf("expected 0 live messages after ClearAll + reload, got %d", len(msgs))
+	}
+}

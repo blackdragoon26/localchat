@@ -490,6 +490,113 @@ func (s *Store) CreateLocalTombstone(targetID string) (Record, bool, error) {
 	return tomb, true, nil
 }
 
+// ClearAll creates tombstones for every live message, deletes all local attachment
+// blobs, and scrubs cleared message records from monthly NDJSON logs in one pass.
+// Because tombstones are persisted, peers automatically clear their storage on sync.
+func (s *Store) ClearAll() ([]Record, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	if len(s.orderedIDs) == 0 {
+		return nil, nil
+	}
+
+	now := time.Now().UTC()
+	tombs := make([]Record, 0, len(s.orderedIDs))
+	affectedLogs := make(map[string]map[string]struct{}) // logPath -> set of targetIDs to scrub
+
+	for _, targetID := range s.orderedIDs {
+		target := s.messages[targetID]
+		tomb := Record{
+			SchemaVersion: SchemaVersion,
+			Kind:          KindTombstone,
+			ID:            ulid.New(now),
+			DeviceID:      s.selfID,
+			DeviceName:    s.selfName,
+			CreatedAtMs:   now.UnixMilli(),
+			TargetID:      targetID,
+		}
+		tombs = append(tombs, tomb)
+
+		logPath := s.monthlyLogPath(target.DeviceID, target.CreatedAtMs)
+		if affectedLogs[logPath] == nil {
+			affectedLogs[logPath] = make(map[string]struct{})
+		}
+		affectedLogs[logPath][targetID] = struct{}{}
+	}
+
+	// Append all tombstones to self monthly log in a single write + fsync.
+	selfLogPath := s.monthlyLogPath(s.selfID, now.UnixMilli())
+	var tombBuf bytes.Buffer
+	for _, tomb := range tombs {
+		raw, err := json.Marshal(tomb)
+		if err != nil {
+			return nil, err
+		}
+		tombBuf.Write(raw)
+		tombBuf.WriteByte('\n')
+	}
+	f, err := os.OpenFile(selfLogPath, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0o600)
+	if err != nil {
+		return nil, err
+	}
+	if _, err := f.Write(tombBuf.Bytes()); err != nil {
+		_ = f.Close()
+		return nil, err
+	}
+	if err := f.Sync(); err != nil {
+		_ = f.Close()
+		return nil, err
+	}
+	if err := f.Close(); err != nil {
+		return nil, err
+	}
+
+	// Update in-memory maps and delete all attachment blobs.
+	for _, tomb := range tombs {
+		target := s.messages[tomb.TargetID]
+		s.tombstones[tomb.ID] = tomb
+		s.tombstoned[tomb.TargetID] = tomb.ID
+		delete(s.messages, tomb.TargetID)
+		delete(s.acked, tomb.TargetID)
+		if target.Attachment != nil {
+			delete(s.attachments, target.Attachment.ID)
+			if p, perr := s.attachmentPathForMeta(*target.Attachment); perr == nil {
+				_ = os.Remove(p)
+			}
+		}
+	}
+
+	// Scrub cleared messages from each affected monthly log in one atomic rewrite per file.
+	for logPath, dropIDs := range affectedLogs {
+		recs, rerr := readNDJSONFile(logPath)
+		if rerr != nil {
+			continue
+		}
+		var buf bytes.Buffer
+		for _, r := range recs {
+			if r.Kind == KindMessage {
+				if _, drop := dropIDs[r.ID]; drop {
+					continue
+				}
+			}
+			line, merr := json.Marshal(r)
+			if merr != nil {
+				continue
+			}
+			buf.Write(line)
+			buf.WriteByte('\n')
+		}
+		if werr := atomicWriteFile(filepath.Dir(logPath), logPath, buf.Bytes(), 0o600); werr != nil {
+			slog.Warn("failed to scrub monthly log during ClearAll", "file", filepath.Base(logPath), "err", werr)
+		}
+	}
+
+	_ = s.saveAckedLocked()
+	s.bumpRevisionLocked()
+	return tombs, nil
+}
+
 func (s *Store) applyTombstoneEffectsLocked(tomb Record, target Record) {
 	s.tombstones[tomb.ID] = tomb
 	s.tombstoned[tomb.TargetID] = tomb.ID

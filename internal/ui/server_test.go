@@ -109,6 +109,22 @@ func TestRootExactMatchHostAndCSRFFailClosed(t *testing.T) {
 	if resp.StatusCode != http.StatusCreated {
 		t.Fatalf("expected 201 for same-origin POST, got %d", resp.StatusCode)
 	}
+
+	// DELETE /api/messages (Clear Chat) requires same-origin and clears all messages.
+	badClear, _ := http.NewRequest(http.MethodDelete, ts.URL+"/api/messages", nil)
+	badClearResp, _ := http.DefaultClient.Do(badClear)
+	badClearResp.Body.Close()
+	if badClearResp.StatusCode != http.StatusForbidden {
+		t.Fatalf("expected 403 for unauthenticated CSRF DELETE /api/messages, got %d", badClearResp.StatusCode)
+	}
+
+	clearReq, _ := http.NewRequest(http.MethodDelete, ts.URL+"/api/messages", nil)
+	clearReq.Header.Set("Sec-Fetch-Site", "same-origin")
+	clearResp, _ := http.DefaultClient.Do(clearReq)
+	clearResp.Body.Close()
+	if clearResp.StatusCode != http.StatusOK {
+		t.Fatalf("expected 200 for same-origin DELETE /api/messages, got %d", clearResp.StatusCode)
+	}
 }
 
 func TestAttachmentSecurityMIMECapAndRange(t *testing.T) {

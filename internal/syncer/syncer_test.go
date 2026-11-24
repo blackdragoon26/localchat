@@ -158,6 +158,20 @@ func TestLivePushOfflineCatchupTombstoneAndThirdPeer(t *testing.T) {
 	if !desktop.store.IsTombstoned(msgSecret.ID) {
 		t.Fatalf("expected 3rd peer to record tombstone for deleted secret")
 	}
+
+	// 5. ClearAll on Mac propagates tombstones and deletes attachments on Ubuntu too.
+	tombs, err := mac.store.ClearAll()
+	if err != nil || len(tombs) != 1 {
+		t.Fatalf("mac ClearAll: len=%d err=%v", len(tombs), err)
+	}
+	mac.syncer.SyncAllPeers(context.Background(), true)
+	ubMsgs, _, _ := ubuntu.store.ListMessages(50, "")
+	if len(ubMsgs) != 0 {
+		t.Fatalf("expected 0 live messages on Ubuntu after Mac ClearAll sync, got %d", len(ubMsgs))
+	}
+	if _, _, err := ubuntu.store.ResolveAttachment(att.ID); err == nil {
+		t.Fatalf("expected attachment blob removed on Ubuntu after Mac ClearAll sync")
+	}
 }
 
 func TestSyncAuthETagAndMissingAttachment409(t *testing.T) {
